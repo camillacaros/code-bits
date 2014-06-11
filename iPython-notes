@@ -1,0 +1,85 @@
+echo "Open a point based shapefile in iPython with OGR"
+#cd to folder where data lives
+
+
+ipython
+import osgeo.ogr
+
+shapeData = osgeo.ogr.Open('filename.shp')
+
+#shapeData. *tab* will give you all options
+
+#get the first layer
+layer = shapeData.GetLayer()
+
+#get the spatial reference of the layer
+spatialReference = layer.GetSpatialRef() 
+spatialReference.ExportToProj4()
+
+#examine the first point
+feature = layer.GetFeature(0)
+geometry = feature.GetGeometryRef()
+geometry.GetX()
+geometry.GetY()
+
+#collect points in a list
+shapeData = osgeo.ogr.Open('filename.shp')
+layer = shapeData.GetLayer()
+points = []
+for index in xrange(layer.GetFeatureCount()):
+	feature = layer.GetFeature(index)
+	geometry = feature.GetGeometryRef()
+	points.append((geometry.GetX(), geometry.GetY()))
+
+#display points
+points
+#returns a list of coordinates
+
+
+---------------------
+
+
+
+import shapefile
+import shapely
+ 
+#Load the a shapefile of polygons and convert it to shapely polygon objects
+census_tract = shapefile.Reader("C:/CENSUS_TRACT_2010.shp")
+tract = census_tract.shapes()
+tract_pts = [q.points for q in tract ]
+from shapely.geometry import Polygon
+tract_poly = [Polygon(q) for q in tract_pts]
+ 
+#Load the a shapefile of points and convert it to shapely point objects
+tour_attr = shapefile.Reader("C:/PointShapeFile.shp")
+attr = tour_attr.shapes()
+from shapely.geometry import Point
+attr_coords = [q.points[0] for q in attr ]
+points = [Point(q.points[0]) for q in attr ]
+ 
+#Build a spatial index based on the bounding boxes of the polygons
+from rtree import index
+idx = index.Index()
+count = -1
+for q in polygon_shapes:
+    count +=1
+    idx.insert(count, q.bbox)
+ 
+#Assign one or more matching polygons to each point
+matches = []
+for i in range(len(points)): #Iterate through each point
+    temp= None
+    print "Point ", i
+    #Iterate only through the bounding boxes which contain the point
+    for j in idx.intersection( point_coords[i]):
+        #Verify that point is within the polygon itself not just the bounding box
+        if points[i].within(polygons[j]):
+            print "Match found! ",j
+            temp=j
+            break
+    matches.append(temp) #Either the first match found, or None for no matches
+
+
+
+
+
