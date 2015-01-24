@@ -1,0 +1,57 @@
+#!/bin/bash
+
+### DG imagery workflow w/ specific starting CRS, bands to presere, and no data values
+
+for var in $@; do
+    export var=${var%.TIF}
+
+    gdalwarp \
+    -s_srs EPSG:32616 \
+    -t_srs EPSG:3857 \
+    -r cubic \
+    -dstnodata 0 \
+    ${var}.tif \
+    ${var}-3857.tif 
+
+    gdal_translate \
+    -scale 0 2047 0 255 \
+    -ot Byte \
+    -b 4 \
+    -b 3 \
+    -b 2 \
+    -co photometric=rgb \
+    -a_srs EPSG:3857 \
+    -a_nodata "0 0 0" \
+    -of GTiff \
+    ${var}-3857.tif \
+    ${var}-3857-rgb.tif
+
+done
+
+gdal_merge.py \
+-o merged.tif \
+-n 0 \
+*rgb.tif
+
+convert -sigmoidal-contrast 8,10% merged.tif merged-color.tif
+
+gdal_translate \
+-a_srs EPSG:3857 \
+-a_nodata "0 0 0" \
+merged-color.tif \
+processed.tif
+
+listgeo -tfw merged.tif
+mv merged.tfw processed.tfw
+gdal_edit.py -a_srs EPSG:3857 processed.tif
+
+for var in $@; do
+    export var=${var%.tif}
+    rm ${var}-3857.tif
+    rm ${var}-3857-rgb.tif
+    rm ${var}-3857-rgb.tif.aux.xml
+    rm ${var}-3857-rgb-nb.tif
+    rm merged.tif
+    rm merged-color.tif
+    rm processed.tfw;
+done
